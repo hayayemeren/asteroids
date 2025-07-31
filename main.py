@@ -16,7 +16,7 @@ def end_display(player, screen, running):
 	final_score_text = final_score_font.render(f"Final Score: {player.score}", True, "white")
 	final_score_rect = final_score_text.get_rect(center=(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 20))
 	screen.blit(final_score_text, final_score_rect)
-	instruction_text = instruction_font.render("Press ESC to Quit", True, "gray")
+	instruction_text = instruction_font.render("Press ENTER to Restart or ESC to Quit", True, "white")
 	instruction_rect = instruction_text.get_rect(center=(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 100))
 	screen.blit(instruction_text, instruction_rect)
 
@@ -53,54 +53,70 @@ def main():
 	AsteroidField.containers = updatable
 	Shot.containers = (shots, updatable, drawable)
 
-	asteroid_field = AsteroidField()
-	player = Player(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2)
+	while True:
 
+		updatable.empty()
+		drawable.empty()
+		asteroids.empty()
+		shots.empty()
 
-	while running:
-		for event in pygame.event.get():
-			if event.type == pygame.QUIT:
-				return
+		Player.containers = (updatable, drawable)
+		Asteroid.containers = (asteroids, updatable, drawable)
+		AsteroidField.containers = updatable
+		Shot.containers = (shots, updatable, drawable)
+
+		asteroid_field = AsteroidField()
+		player = Player(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2)
+
+		running = True
+		while running:
+			for event in pygame.event.get():
+				if event.type == pygame.QUIT:
+					return
+			updatable.update(dt)
+			screen.fill("black")
+
+			for asteroid in asteroids:
+				if asteroid.collides_with(player):
+					player.lives -= 1
+					if player.lives > 0:
+						asteroid.kill()
+					else:
+						running = False
+						break
+				for shot in shots:
+					if asteroid.collides_with(shot):
+						shot.kill()
+						asteroid.split()
+						player.score += 1
+
+			for obj in drawable:
+				obj.draw(screen)
 			
-		updatable.update(dt)
-		screen.fill("black")
+			score_display(player, screen)
+			lives_display(player, screen)
+			
+			pygame.display.flip()
+			dt = clock.tick(60) / 1000
 
-		for asteroid in asteroids:
-			if asteroid.collides_with(player):
-				player.lives -= 1
-				if player.lives > 0:
-					asteroid.kill()
-				else:
-					running = False
-					break
-			for shot in shots:
-				if asteroid.collides_with(shot):
-					shot.kill()
-					asteroid.split()
-					player.score += 1
-
-		for obj in drawable:
-			obj.draw(screen)
-		
-		score_display(player, screen)
-		lives_display(player, screen)
-		
-		pygame.display.flip()
-		dt = clock.tick(60) / 1000
-
-	# Game over loop
-	game_over = True
-	while game_over:
-		for event in pygame.event.get():
-			if event.type == pygame.QUIT:
-				game_over = False
-			elif event.type == pygame.KEYDOWN:
-				if event.key == pygame.K_ESCAPE:
-					game_over = False
-		screen.fill("black")
-		end_display(player, screen, False)
-		pygame.display.flip()
-		clock.tick(30)
+		game_over = True
+		restart = False
+		while game_over:
+			for event in pygame.event.get():
+				if event.type == pygame.QUIT:
+					return
+				elif event.type == pygame.KEYDOWN:
+					if event.key == pygame.K_ESCAPE:
+						return
+					elif event.key == pygame.K_RETURN:
+						game_over = False
+						restart = True
+			screen.fill("black")
+			end_display(player, screen, False)
+			pygame.display.flip()
+			clock.tick(30)
+		if not restart:
+			break
 
 if __name__ == "__main__":
 	main()
